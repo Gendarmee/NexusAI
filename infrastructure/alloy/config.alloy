@@ -1,0 +1,52 @@
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.containers.targets
+  forward_to = [loki.process.add_labels.receiver]
+}
+
+loki.process "add_labels" {
+  forward_to = [loki.write.local.receiver]
+
+  stage.static_labels {
+    values = {
+      job = "docker-logs",
+    }
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = env("LOKI_URL")
+  }
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = env("PROMETHEUS_URL")
+  }
+}
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}

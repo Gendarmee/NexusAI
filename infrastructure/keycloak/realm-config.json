@@ -1,0 +1,6 @@
+{
+  "id": "master",
+  "realm": "master",
+  "displayName": "Keycloak",
+  "enabled": true
+}

@@ -1,1 +1,20 @@
-/.env
+.env
+.env.local
+.env.*.local
+
+# Данные и логи (если вдруг решишь мапить volumes в локальные папки)
+*.log
+data/
+logs/
+
+# IDE и ОС
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Сертификаты (на будущее для nginx)
+*.pem
+*.key
+*.crt
