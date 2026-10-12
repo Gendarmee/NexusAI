@@ -2,7 +2,7 @@ services:
   user-postgres:
     container_name: user-postgres
     image: postgres:18
-    restart: always
+    restart: unless-stopped
     ports:
       - "5434:5432"
     environment:
@@ -10,9 +10,34 @@ services:
       POSTGRES_PASSWORD: ${USER_POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
     volumes:
-      - user_pgdata:/var/lib/postgresql
+      - payment_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${BASE_POSTGRES_USER} -p 5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - monitoring
+
+  payment-service:
+    container_name: payment-service
+    build: ./Payment-Service/
+
+  payment-postgres:
+    container_name: payment-postgres
+    image: postgres:18
+    restart: unless-stopped
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_USER: ${BASE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PAYMENT_POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - payment_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${BASE_POSTGRES_USER} -p 5432" ]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -22,7 +47,7 @@ services:
   user-postgres-exporter:
     container_name: user-postgres-exporter
     image: prometheuscommunity/postgres-exporter:v0.20.0
-    restart: always
+    restart: unless-stopped
     ports:
       - "9188:9187"
     environment:
@@ -36,7 +61,7 @@ services:
   keycloak-postgres:
     container_name: keycloak-postgres
     image: postgres:18
-    restart: always
+    restart: unless-stopped
     ports:
       - "5435:5432"
     environment:
@@ -56,7 +81,7 @@ services:
   keycloak-postgres-exporter:
     container_name: keycloak-postgres-exporter # Исправлена опечатка (было postgrews)
     image: prometheuscommunity/postgres-exporter:v0.20.0
-    restart: always
+    restart: unless-stopped
     ports:
       - "9189:9187"
     environment:
@@ -70,7 +95,7 @@ services:
   keycloak:
     container_name: keycloak
     image: keycloak/keycloak:26.6.4
-    restart: always
+    restart: unless-stopped
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak_db
@@ -98,29 +123,10 @@ services:
     networks:
       - monitoring
 
-  nexus:
-    container_name: nexus
-    image: sonatype/nexus3:3.96.3
-    restart: always
-    ports:
-      - "8081:8081"
-    environment:
-      NEXUS_SECURITY_RANDOMPASSWORD: false
-      NEXUS_CONTEXT: /nexus # Важно для корректной работы за Nginx
-    volumes:
-      - nexus-data:/nexus-data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/service/rest/v1/status"]
-      interval: 15s
-      timeout: 10s
-      retries: 30
-    networks:
-      - monitoring
-
   redis:
     container_name: redis
     image: redis:8.10.0
-    restart: always
+    restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
@@ -132,7 +138,7 @@ services:
   kafka:
     container_name: kafka
     image: apache/kafka:4.3.1
-    restart: always
+    restart: unless-stopped
     ports:
       - "9092:9092"
     volumes:
@@ -143,7 +149,7 @@ services:
   prometheus:
     container_name: prometheus
     image: prom/prometheus:v3.0.0
-    restart: always
+    restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--web.enable-remote-write-receiver'
@@ -159,7 +165,7 @@ services:
   loki:
     container_name: loki
     image: grafana/loki:3.1.0
-    restart: always
+    restart: unless-stopped
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/loki.yaml
@@ -172,7 +178,7 @@ services:
   tempo:
     container_name: tempo
     image: grafana/tempo:3.1.0-rc.1
-    restart: always
+    restart: unless-stopped
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./infrastructure/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
@@ -186,7 +192,7 @@ services:
   alloy:
     container_name: alloy
     image: grafana/alloy:v1.19.0
-    restart: always
+    restart: unless-stopped
     ports:
       - "9080:9080"
       - "4317:4317"
@@ -216,7 +222,7 @@ services:
   grafana:
     container_name: grafana
     image: grafana/grafana:13.1
-    restart: always
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
@@ -235,7 +241,7 @@ services:
   nginx:
     container_name: nginx
     image: nginx:alpine
-    restart: always
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -244,14 +250,13 @@ services:
     depends_on:
       - grafana
       - keycloak
-      - nexus
     networks:
       - monitoring
 
 volumes:
   user_pgdata:
+  payment_pgdata:
   kc_pgdata:
-  nexus-data:
   redis-data:
   tempo_data:
   prometheus_data:
