@@ -79,7 +79,7 @@ services:
       - monitoring
 
   keycloak-postgres-exporter:
-    container_name: keycloak-postgres-exporter # Исправлена опечатка (было postgrews)
+    container_name: keycloak-postgres-exporters
     image: prometheuscommunity/postgres-exporter:v0.20.0
     restart: unless-stopped
     ports:
