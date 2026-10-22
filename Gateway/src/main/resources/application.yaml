@@ -1,4 +1,57 @@
-spring.application.name=Gateway
-management.otlp.metrics.export.url=http://alloy:4318/v1/metrics
-management.otlp.metrics.export.enabled=true
-management.otlp.metrics.export.step=1m
+server:
+  port: 8081
+
+spring:
+  application:
+    name: Gateway
+  config:
+    import:
+      - optional:classpath:routes.yaml
+      - optional:classpath:public-endpoints.yaml
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI}
+          issuer-uri: ${KEYCLOAK_ISSUER_URL}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.uuid}
+
+converter:
+  keycloak:
+    realm-roles-enabled: true
+    client-id: ai-gateway-client
+
+gateway:
+  security:
+    keycloak:
+      introspection-url: ${INTROSPECTION_KC_URL}
+      client-id: ai-gateway-client
+      client-secret: ${KEYCLOAK_CLIENT_SECRET}
+      online-validation-enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  otlp:
+    metrics:
+      export:
+        url: http://alloy:4318/v1/metrics
+        enabled: true
+        step: 15s
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    by.gendarme.gateway: DEBUG
