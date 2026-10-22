@@ -1,0 +1,9 @@
+gateway:
+  security:
+    public-endpoints:
+      - /api/v1/auth/**
+      - /api/v1/payments/webhook/**
+      - /actuator/**
+      - /swagger/**
+      - /v3/api-docs/**
+      - /swagger-ui.html
